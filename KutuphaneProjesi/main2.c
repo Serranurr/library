@@ -19,7 +19,7 @@ void loadBooksFromFile() {
 
     char isbn[20], title[100];
     int stock;
-    head = NULL; // Listeyi sifirla
+    head = NULL; 
     
     while (fscanf(file, "%[^,],%[^,],%d\n", isbn, title, &stock) != EOF) {
         Book* newBook = (Book*)malloc(sizeof(Book));
@@ -51,14 +51,13 @@ void saveBooksToFile() {
     fclose(file);
 }
 
-// --- KAYIT VE GIRIS (SADECE OGRENCI KAYDI) ---
+// --- KAYIT VE GIRIS (SISTEM GIRISI) ---
 void registerUser() {
     char username[50], password[50];
     printf("\n--- YENI OGRENCI KAYDI ---\n");
     printf("Kullanici Adi: "); scanf("%s", username);
     printf("Sifre: "); scanf("%s", password);
 
-    // Artik rol sormuyoruz, direkt 'ogrenci' olarak yapistiriyoruz!
     FILE* file = fopen("kullanicilar.txt", "a");
     fprintf(file, "%s,%s,ogrenci\n", username, password);
     fclose(file);
@@ -81,7 +80,19 @@ int loginUser(char* inputUser, char* inputPass, char* loggedRole) {
     return 0;
 }
 
-// --- YONETICI: UYE ISLEMLERI (TEMP TAKTIGI) ---
+// --- YONETICI: KULLANICI YONETIMI ---
+void addUserByAdmin() {
+    char u[50], p[50], r[20];
+    printf("Yeni Kullanici Adi: "); scanf("%s", u);
+    printf("Sifre: "); scanf("%s", p);
+    printf("Rolu (yonetici / ogrenci): "); scanf("%s", r);
+    
+    FILE* file = fopen("kullanicilar.txt", "a");
+    fprintf(file, "%s,%s,%s\n", u, p, r);
+    fclose(file);
+    printf("Kullanici basariyla sisteme eklendi!\n");
+}
+
 void makeAdmin() {
     char targetUser[50];
     printf("Yonetici yapilacak kullanici adi: "); scanf("%s", targetUser);
@@ -93,10 +104,10 @@ void makeAdmin() {
 
     while(fscanf(file, "%[^,],%[^,],%s\n", u, p, r) != EOF) {
         if(strcmp(u, targetUser) == 0) {
-            fprintf(temp, "%s,%s,yonetici\n", u, p); // Rolu degistirdik
+            fprintf(temp, "%s,%s,yonetici\n", u, p); 
             found = 1;
         } else {
-            fprintf(temp, "%s,%s,%s\n", u, p, r); // Aynen kopyaladik
+            fprintf(temp, "%s,%s,%s\n", u, p, r); 
         }
     }
     fclose(file); fclose(temp);
@@ -118,7 +129,7 @@ void deleteUser() {
 
     while(fscanf(file, "%[^,],%[^,],%s\n", u, p, r) != EOF) {
         if(strcmp(u, targetUser) == 0) {
-            found = 1; // Dosyaya yazmiyoruz, yani silmis oluyoruz!
+            found = 1; 
         } else {
             fprintf(temp, "%s,%s,%s\n", u, p, r);
         }
@@ -131,7 +142,7 @@ void deleteUser() {
     else printf("Kullanici bulunamadi!\n");
 }
 
-// --- YONETICI: KITAP ISLEMLERI ---
+// --- YONETICI: ENVANTER YONETIMI ---
 void addBook() {
     Book* newBook = (Book*)malloc(sizeof(Book));
     printf("ISBN: "); scanf("%s", newBook->isbn);
@@ -161,7 +172,6 @@ void deleteBook() {
         return;
     }
 
-    // Listeden koparip siliyoruz
     if (prev == NULL) head = current->next;
     else prev->next = current->next;
 
@@ -219,7 +229,7 @@ void returnBook() {
     printf("Sistemde boyle bir kitap yok!\n");
 }
 
-// --- ANA MENU ---
+// --- ANA MOTOR (MENU HIYERARSISI) ---
 int main() {
     loadBooksFromFile();
     int choice;
@@ -231,7 +241,7 @@ int main() {
         scanf("%d", &choice);
 
         if (choice == 2) {
-            registerUser(); // Artik sadece ogrenci kaydeder
+            registerUser(); 
         } 
         else if (choice == 1) {
             printf("Kullanici Adi: "); scanf("%s", username);
@@ -240,32 +250,54 @@ int main() {
             if (loginUser(username, password, role)) {
                 printf("\nHOSGELDIN %s! (Yetki: %s)\n", username, role);
                 
-                int innerChoice;
+                int adminChoice;
                 do {
-                    // YONETICI MENUSU
+                    // --- YONETICI MENUSU (KATMANLI) ---
                     if (strcmp(role, "yonetici") == 0) {
                         printf("\n[ YONETICI PANELI ]\n");
-                        printf("1. Kitap Ekle\n2. Kitap Sil\n3. Kitaplari Listele\n");
-                        printf("4. Yeni Yonetici Ata\n5. Kullanici Sil\n0. Cikis Yap\nSecim: ");
-                        scanf("%d", &innerChoice);
+                        printf("1. Envanter Yonetimi (Kitap Islemleri)\n");
+                        printf("2. Kullanici Yonetimi (Uye Islemleri)\n");
+                        printf("0. Cikis Yap\nSeciminiz: ");
+                        scanf("%d", &adminChoice);
 
-                        if (innerChoice == 1) addBook();
-                        else if (innerChoice == 2) deleteBook();
-                        else if (innerChoice == 3) listBooks();
-                        else if (innerChoice == 4) makeAdmin();
-                        else if (innerChoice == 5) deleteUser();
+                        // 1. ALT MENU: ENVANTER YONETIMI
+                        if (adminChoice == 1) {
+                            int bookChoice;
+                            do {
+                                printf("\n--- ENVANTER YONETIMI ---\n");
+                                printf("1. Kitap Ekle\n2. Kitap Sil\n3. Kitaplari Listele\n0. Yonetici Paneline Don\nSecim: ");
+                                scanf("%d", &bookChoice);
+
+                                if (bookChoice == 1) addBook();
+                                else if (bookChoice == 2) deleteBook();
+                                else if (bookChoice == 3) listBooks();
+                            } while (bookChoice != 0);
+                        }
+                        // 2. ALT MENU: KULLANICI YONETIMI
+                        else if (adminChoice == 2) {
+                            int userChoice;
+                            do {
+                                printf("\n--- KULLANICI YONETIMI ---\n");
+                                printf("1. Yeni Uye Ekle\n2. Uye Sil\n3. Yonetici Yap\n0. Yonetici Paneline Don\nSecim: ");
+                                scanf("%d", &userChoice);
+
+                                if (userChoice == 1) addUserByAdmin();
+                                else if (userChoice == 2) deleteUser();
+                                else if (userChoice == 3) makeAdmin();
+                            } while (userChoice != 0);
+                        }
                     } 
-                    // OGRENCI MENUSU
+                    // --- OGRENCI MENUSU (SADE) ---
                     else if (strcmp(role, "ogrenci") == 0) {
                         printf("\n[ OGRENCI PANELI ]\n");
                         printf("1. Kitaplari Listele\n2. Kitap Odunc Al\n3. Kitap Iade Et\n0. Cikis Yap\nSecim: ");
-                        scanf("%d", &innerChoice);
+                        scanf("%d", &adminChoice); // Degisken ayni kalsin dongu kirilsin diye
 
-                        if (innerChoice == 1) listBooks();
-                        else if (innerChoice == 2) borrowBook();
-                        else if (innerChoice == 3) returnBook();
+                        if (adminChoice == 1) listBooks();
+                        else if (adminChoice == 2) borrowBook();
+                        else if (adminChoice == 3) returnBook();
                     }
-                } while (innerChoice != 0);
+                } while (adminChoice != 0);
             } else {
                 printf("Hatali kullanici adi veya sifre!\n");
             }
