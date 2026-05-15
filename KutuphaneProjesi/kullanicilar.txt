@@ -1,7 +1,7 @@
 serra,1234,yonetici
-beyazit,1234,yonetici
-ozan,1234,yonetici
-ahmet,4567,personel
+beyazit,1234,personel
+ozan,1234,personel
+ahmet,4567,ogrenci
 ayse,qwer,ogrenci
 mehmet,asdf,ogrenci
 fatma,zxcv,ogrenci
