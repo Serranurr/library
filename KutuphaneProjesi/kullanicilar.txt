@@ -3,6 +3,6 @@ suzan,1234,yonetici
 ali,1234,personel
 ahmet,4567,yonetici
 ayse,qwer,ogrenci
-mehmet,asdf,ogrencis
+mehmet,asdf,ogrenci
 fatma,zxcv,ogrenci
 melis,1234,ogrenci
