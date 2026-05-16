@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h> // Loglar (gecmis) icin gerekli
+#include <time.h> 
 
 // --- VERI YAPILARI ---
 typedef struct Book {
@@ -13,7 +13,7 @@ typedef struct Book {
 
 Book* head = NULL;
 
-// --- ISLEM GECMISI (LOG) FONKSIYONLARI ---
+// --- ISLEM GECMISI FONKSIYONLARI ---
 void logTransaction(char* user, char* action, char* detail) {
     FILE* file = fopen("islem_gecmisi.txt", "a"); 
     time_t t = time(NULL);
@@ -32,10 +32,49 @@ void viewHistory() {
         return; 
     }
     char line[256];
-    printf("\n--- KUTUPHANE ISLEM GECMISI ---\n");
+    printf("\n--- KUTUPHANE GENEL ISLEM GECMISI (LOGLAR) ---\n");
     while (fgets(line, sizeof(line), file)) {
         printf("%s", line);
     }
+    fclose(file);
+}
+
+void viewAllActiveLoans() {
+    FILE* file = fopen("aktif_odunc.txt", "r");
+    if (file == NULL) { 
+        printf("\nSu an odunc verilmis hicbir kitap yok.\n"); 
+        return; 
+    }
+    char u[50], b[100];
+    int found = 0;
+    printf("\n--- SU AN ODUNC VERILMIS TUM KITAPLAR ---\n");
+    while (fscanf(file, "%[^,],%[^\n]\n", u, b) != EOF) {
+        printf("Ogrenci: %s | Elindeki Kitap: %s\n", u, b);
+        found = 1;
+    }
+    if (!found) printf("Su an odunc verilmis hicbir kitap yok.\n");
+    fclose(file);
+}
+
+void viewUserHistory(char* username) {
+    FILE* file = fopen("islem_gecmisi.txt", "r");
+    if (file == NULL) { 
+        printf("\nHenuz hicbir islem kaydiniz yok.\n"); 
+        return; 
+    }
+    char line[256];
+    char pattern[70];
+    sprintf(pattern, " %s: ", username); 
+    
+    printf("\n--- KISISEL ISLEM GECMISINIZ ---\n");
+    int found = 0;
+    while (fgets(line, sizeof(line), file)) {
+        if (strstr(line, pattern) != NULL) { 
+            printf("%s", line);
+            found = 1;
+        }
+    }
+    if (!found) printf("Gecmis islem kaydiniz bulunamadi.\n");
     fclose(file);
 }
 
@@ -55,9 +94,8 @@ void loadBooksFromFile() {
         newBook->stock = stock;
         newBook->next = NULL;
 
-        if (head == NULL) {
-            head = newBook;
-        } else {
+        if (head == NULL) head = newBook;
+        else {
             Book* current = head;
             while (current->next != NULL) current = current->next;
             current->next = newBook;
@@ -80,11 +118,12 @@ void saveBooksToFile() {
 void registerUser() {
     char username[50], password[50];
     printf("\n--- YENI OGRENCI KAYDI ---\n");
-    printf("Kullanici Adi: "); scanf("%s", username);
+    printf("Kullanici Adi (Iptal icin 0): "); scanf("%s", username);
+    if (strcmp(username, "0") == 0) return; // Kullanici vazgecerse geri don
     printf("Sifre: "); scanf("%s", password);
 
     FILE* file = fopen("kullanicilar.txt", "a");
-    fprintf(file, "%s,%s,ogrenci\n", username, password); // Yeni kayitlar otomatik ogrenci
+    fprintf(file, "%s,%s,ogrenci\n", username, password);
     fclose(file);
     
     logTransaction(username, "SISTEME KAYIT OLDU", "-");
@@ -110,9 +149,11 @@ int loginUser(char* inputUser, char* inputPass, char* loggedRole) {
 // --- YONETICI: KULLANICI YONETIMI ---
 void addUserByAdmin(char* adminName) {
     char u[50], p[50], r[20];
-    printf("Yeni Kullanici Adi: "); scanf("%s", u);
+    printf("Yeni Kullanici Adi (Iptal icin 0): "); scanf("%s", u);
+    if (strcmp(u, "0") == 0) return; // Vazgecis
+    
     printf("Sifre: "); scanf("%s", p);
-    printf("Rolu (yonetici / personel / ogrenci): "); scanf("%s", r); // Personel de eklenebilir
+    printf("Rolu (yonetici / personel / ogrenci): "); scanf("%s", r);
     
     FILE* file = fopen("kullanicilar.txt", "a");
     fprintf(file, "%s,%s,%s\n", u, p, r);
@@ -124,7 +165,8 @@ void addUserByAdmin(char* adminName) {
 
 void makeAdmin(char* adminName) {
     char targetUser[50];
-    printf("Yonetici yapilacak kullanici adi: "); scanf("%s", targetUser);
+    printf("Yonetici yapilacak kullanici adi (Iptal icin 0): "); scanf("%s", targetUser);
+    if (strcmp(targetUser, "0") == 0) return;
 
     FILE *file = fopen("kullanicilar.txt", "r");
     FILE *temp = fopen("temp.txt", "w");
@@ -151,7 +193,8 @@ void makeAdmin(char* adminName) {
 
 void deleteUser(char* adminName) {
     char targetUser[50];
-    printf("Silinecek kullanici adi: "); scanf("%s", targetUser);
+    printf("Silinecek kullanici adi (Iptal icin 0): "); scanf("%s", targetUser);
+    if (strcmp(targetUser, "0") == 0) return;
 
     FILE *file = fopen("kullanicilar.txt", "r");
     FILE *temp = fopen("temp.txt", "w");
@@ -159,11 +202,8 @@ void deleteUser(char* adminName) {
     int found = 0;
 
     while(fscanf(file, "%[^,],%[^,],%s\n", u, p, r) != EOF) {
-        if(strcmp(u, targetUser) == 0) {
-            found = 1; 
-        } else {
-            fprintf(temp, "%s,%s,%s\n", u, p, r);
-        }
+        if(strcmp(u, targetUser) == 0) found = 1; 
+        else fprintf(temp, "%s,%s,%s\n", u, p, r);
     }
     fclose(file); fclose(temp);
     remove("kullanicilar.txt");
@@ -175,10 +215,17 @@ void deleteUser(char* adminName) {
     } else printf("Kullanici bulunamadi!\n");
 }
 
-// --- ENVANTER YONETIMI (Yonetici ve Personel Kullanir) ---
+// --- ENVANTER YONETIMI ---
 void addBook(char* activeUser) {
     Book* newBook = (Book*)malloc(sizeof(Book));
-    printf("ISBN: "); scanf("%s", newBook->isbn);
+    printf("ISBN (Iptal icin 0): "); scanf("%s", newBook->isbn);
+    
+    // Iptal edilirse hafizada actigimiz yeri geri iade edip (free) cikiyoruz
+    if (strcmp(newBook->isbn, "0") == 0) {
+        free(newBook);
+        return;
+    }
+    
     printf("Kitap Adi: "); scanf("%s", newBook->title);
     printf("Stok: "); scanf("%d", &newBook->stock);
     
@@ -192,7 +239,8 @@ void addBook(char* activeUser) {
 
 void deleteBook(char* activeUser) {
     char targetTitle[100];
-    printf("Silinecek kitap adi: "); scanf("%s", targetTitle);
+    printf("Silinecek kitap adi (Iptal icin 0): "); scanf("%s", targetTitle);
+    if (strcmp(targetTitle, "0") == 0) return;
 
     Book* current = head;
     Book* prev = NULL;
@@ -226,10 +274,31 @@ void listBooks() {
     }
 }
 
-// --- OGRENCI: ODUNC VE IADE ---
+// --- OGRENCI: ODUNC, IADE VE AKTIF DOSYALAR ---
+void viewMyBooks(char* username) {
+    FILE* file = fopen("aktif_odunc.txt", "r");
+    if (file == NULL) { 
+        printf("\nUzerinizde hic kitap bulunmuyor.\n"); 
+        return; 
+    }
+    char u[50], b[100];
+    int found = 0;
+    
+    printf("\n--- UZERIMDEKI KITAPLAR ---\n");
+    while (fscanf(file, "%[^,],%[^\n]\n", u, b) != EOF) {
+        if (strcmp(u, username) == 0) {
+            printf("- %s\n", b);
+            found = 1;
+        }
+    }
+    if (!found) printf("Uzerinizde hic kitap bulunmuyor.\n");
+    fclose(file);
+}
+
 void borrowBook(char* username) {
     char searchTitle[100];
-    printf("Odunc alinacak kitap: "); scanf("%s", searchTitle);
+    printf("Odunc alinacak kitap (Iptal icin 0): "); scanf("%s", searchTitle);
+    if (strcmp(searchTitle, "0") == 0) return; // Vazgecis
     
     Book* current = head;
     while (current != NULL) {
@@ -237,6 +306,11 @@ void borrowBook(char* username) {
             if (current->stock > 0) {
                 current->stock--;
                 saveBooksToFile();
+                
+                FILE* f = fopen("aktif_odunc.txt", "a");
+                fprintf(f, "%s,%s\n", username, searchTitle);
+                fclose(f);
+
                 logTransaction(username, "ODUNC ALDI", searchTitle);
                 printf("Kitabi aldiniz! Kalan stok: %d\n", current->stock);
             } else {
@@ -251,8 +325,32 @@ void borrowBook(char* username) {
 
 void returnBook(char* username) {
     char searchTitle[100];
-    printf("Iade edilecek kitap: "); scanf("%s", searchTitle);
+    printf("Iade edilecek kitap (Iptal icin 0): "); scanf("%s", searchTitle);
+    if (strcmp(searchTitle, "0") == 0) return; // Vazgecis
     
+    FILE* f = fopen("aktif_odunc.txt", "r");
+    FILE* temp = fopen("temp_odunc.txt", "w");
+    int removed = 0;
+    
+    if (f != NULL) {
+        char u[50], b[100];
+        while (fscanf(f, "%[^,],%[^\n]\n", u, b) != EOF) {
+            if (!removed && strcmp(u, username) == 0 && strcmp(b, searchTitle) == 0) {
+                removed = 1; 
+            } else {
+                fprintf(temp, "%s,%s\n", u, b);
+            }
+        }
+        fclose(f); fclose(temp);
+        remove("aktif_odunc.txt");
+        rename("temp_odunc.txt", "aktif_odunc.txt");
+    }
+
+    if (!removed) {
+        printf("Sistemde uzerinize kayitli boyle bir kitap yok!\n");
+        return; 
+    }
+
     Book* current = head;
     while (current != NULL) {
         if (strcmp(current->title, searchTitle) == 0) {
@@ -264,10 +362,9 @@ void returnBook(char* username) {
         }
         current = current->next;
     }
-    printf("Sistemde boyle bir kitap yok!\n");
 }
 
-// --- ANA MOTOR (MENU HIYERARSISI) ---
+// --- ANA MOTOR (MENU) ---
 int main() {
     loadBooksFromFile();
     int choice;
@@ -278,9 +375,7 @@ int main() {
         printf("1. Giris Yap\n2. Kayit Ol\n0. Cikis\nSecim: ");
         scanf("%d", &choice);
 
-        if (choice == 2) {
-            registerUser(); 
-        } 
+        if (choice == 2) registerUser(); 
         else if (choice == 1) {
             printf("Kullanici Adi: "); scanf("%s", username);
             printf("Sifre: "); scanf("%s", password);
@@ -296,7 +391,8 @@ int main() {
                         printf("\n[ YONETICI PANELI ]\n");
                         printf("1. Envanter Yonetimi (Kitap Islemleri)\n");
                         printf("2. Kullanici Yonetimi (Uye Islemleri)\n");
-                        printf("3. Islem Gecmisini (Loglari) Goruntule\n");
+                        printf("3. Su An Kimde Ne Kitap Var? (Aktif Oduncler)\n"); 
+                        printf("4. Genel Islem Gecmisini (Loglari) Goruntule\n");
                         printf("0. Cikis Yap\nSeciminiz: ");
                         scanf("%d", &menuChoice);
 
@@ -322,13 +418,15 @@ int main() {
                                 else if (userChoice == 3) makeAdmin(username);
                             } while (userChoice != 0);
                         }
-                        else if (menuChoice == 3) viewHistory();
+                        else if (menuChoice == 3) viewAllActiveLoans(); 
+                        else if (menuChoice == 4) viewHistory();
                     } 
-                    // --- PERSONEL MENUSU (YENI EKLENDI!) ---
+                    // --- PERSONEL MENUSU ---
                     else if (strcmp(role, "personel") == 0) {
                         printf("\n[ PERSONEL PANELI ]\n");
                         printf("1. Envanter Yonetimi (Kitap Islemleri)\n");
-                        printf("2. Islem Gecmisini (Loglari) Goruntule\n");
+                        printf("2. Su An Kimde Ne Kitap Var? (Aktif Oduncler)\n");
+                        printf("3. Islem Gecmisini (Loglari) Goruntule\n");
                         printf("0. Cikis Yap\nSeciminiz: ");
                         scanf("%d", &menuChoice);
 
@@ -343,17 +441,21 @@ int main() {
                                 else if (bookChoice == 3) listBooks();
                             } while (bookChoice != 0);
                         }
-                        else if (menuChoice == 2) viewHistory();
+                        else if (menuChoice == 2) viewAllActiveLoans(); 
+                        else if (menuChoice == 3) viewHistory();
                     }
                     // --- OGRENCI MENUSU ---
                     else if (strcmp(role, "ogrenci") == 0) {
                         printf("\n[ OGRENCI PANELI ]\n");
-                        printf("1. Kitaplari Listele\n2. Kitap Odunc Al\n3. Kitap Iade Et\n0. Cikis Yap\nSecim: ");
+                        printf("1. Kitaplari Listele\n2. Kitap Odunc Al\n3. Kitap Iade Et\n");
+                        printf("4. Uzerimdeki Kitaplari Gor\n5. Gecmis Islem Kaydimi Gor\n0. Cikis Yap\nSecim: ");
                         scanf("%d", &menuChoice); 
 
                         if (menuChoice == 1) listBooks();
                         else if (menuChoice == 2) borrowBook(username);
                         else if (menuChoice == 3) returnBook(username);
+                        else if (menuChoice == 4) viewMyBooks(username);
+                        else if (menuChoice == 5) viewUserHistory(username);
                     }
                 } while (menuChoice != 0);
                 
@@ -362,9 +464,7 @@ int main() {
                 printf("Hatali kullanici adi veya sifre!\n");
             }
         }
-        else if (choice == 0) {
-            break;
-        }
+        else if (choice == 0) break;
     }
     return 0;
 }
