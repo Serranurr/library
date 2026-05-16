@@ -15,7 +15,7 @@ Book* head = NULL;
 
 // --- ISLEM GECMISI (LOG) FONKSIYONLARI ---
 void logTransaction(char* user, char* action, char* detail) {
-    FILE* file = fopen("islem_gecmisi.txt", "a"); // Dosya yoksa kendi olusturur
+    FILE* file = fopen("islem_gecmisi.txt", "a"); 
     time_t t = time(NULL);
     struct tm tm = *localtime(&t);
     
@@ -84,7 +84,7 @@ void registerUser() {
     printf("Sifre: "); scanf("%s", password);
 
     FILE* file = fopen("kullanicilar.txt", "a");
-    fprintf(file, "%s,%s,ogrenci\n", username, password);
+    fprintf(file, "%s,%s,ogrenci\n", username, password); // Yeni kayitlar otomatik ogrenci
     fclose(file);
     
     logTransaction(username, "SISTEME KAYIT OLDU", "-");
@@ -112,7 +112,7 @@ void addUserByAdmin(char* adminName) {
     char u[50], p[50], r[20];
     printf("Yeni Kullanici Adi: "); scanf("%s", u);
     printf("Sifre: "); scanf("%s", p);
-    printf("Rolu (yonetici / ogrenci): "); scanf("%s", r);
+    printf("Rolu (yonetici / personel / ogrenci): "); scanf("%s", r); // Personel de eklenebilir
     
     FILE* file = fopen("kullanicilar.txt", "a");
     fprintf(file, "%s,%s,%s\n", u, p, r);
@@ -175,8 +175,8 @@ void deleteUser(char* adminName) {
     } else printf("Kullanici bulunamadi!\n");
 }
 
-// --- YONETICI: ENVANTER YONETIMI ---
-void addBook(char* adminName) {
+// --- ENVANTER YONETIMI (Yonetici ve Personel Kullanir) ---
+void addBook(char* activeUser) {
     Book* newBook = (Book*)malloc(sizeof(Book));
     printf("ISBN: "); scanf("%s", newBook->isbn);
     printf("Kitap Adi: "); scanf("%s", newBook->title);
@@ -186,11 +186,11 @@ void addBook(char* adminName) {
     head = newBook;
     saveBooksToFile();
     
-    logTransaction(adminName, "KITAP EKLEDI", newBook->title);
+    logTransaction(activeUser, "KITAP EKLEDI", newBook->title);
     printf("Kitap basariyla eklendi!\n");
 }
 
-void deleteBook(char* adminName) {
+void deleteBook(char* activeUser) {
     char targetTitle[100];
     printf("Silinecek kitap adi: "); scanf("%s", targetTitle);
 
@@ -210,7 +210,7 @@ void deleteBook(char* adminName) {
     if (prev == NULL) head = current->next;
     else prev->next = current->next;
 
-    logTransaction(adminName, "KITAP SILDI", current->title);
+    logTransaction(activeUser, "KITAP SILDI", current->title);
     free(current);
     saveBooksToFile();
     printf("Kitap sistemden tamamen silindi!\n");
@@ -289,59 +289,73 @@ int main() {
                 logTransaction(username, "SISTEME GIRDI", "-");
                 printf("\nHOSGELDIN %s! (Yetki: %s)\n", username, role);
                 
-                int adminChoice;
+                int menuChoice;
                 do {
-                    // --- YONETICI MENUSU (KATMANLI) ---
+                    // --- YONETICI MENUSU ---
                     if (strcmp(role, "yonetici") == 0) {
                         printf("\n[ YONETICI PANELI ]\n");
                         printf("1. Envanter Yonetimi (Kitap Islemleri)\n");
                         printf("2. Kullanici Yonetimi (Uye Islemleri)\n");
                         printf("3. Islem Gecmisini (Loglari) Goruntule\n");
                         printf("0. Cikis Yap\nSeciminiz: ");
-                        scanf("%d", &adminChoice);
+                        scanf("%d", &menuChoice);
 
-                        // 1. ALT MENU: ENVANTER YONETIMI
-                        if (adminChoice == 1) {
+                        if (menuChoice == 1) {
                             int bookChoice;
                             do {
                                 printf("\n--- ENVANTER YONETIMI ---\n");
                                 printf("1. Kitap Ekle\n2. Kitap Sil\n3. Kitaplari Listele\n0. Yonetici Paneline Don\nSecim: ");
                                 scanf("%d", &bookChoice);
-
                                 if (bookChoice == 1) addBook(username);
                                 else if (bookChoice == 2) deleteBook(username);
                                 else if (bookChoice == 3) listBooks();
                             } while (bookChoice != 0);
                         }
-                        // 2. ALT MENU: KULLANICI YONETIMI
-                        else if (adminChoice == 2) {
+                        else if (menuChoice == 2) {
                             int userChoice;
                             do {
                                 printf("\n--- KULLANICI YONETIMI ---\n");
                                 printf("1. Yeni Uye Ekle\n2. Uye Sil\n3. Yonetici Yap\n0. Yonetici Paneline Don\nSecim: ");
                                 scanf("%d", &userChoice);
-
                                 if (userChoice == 1) addUserByAdmin(username);
                                 else if (userChoice == 2) deleteUser(username);
                                 else if (userChoice == 3) makeAdmin(username);
                             } while (userChoice != 0);
                         }
-                        // 3. ALT MENU: GECMIS
-                        else if (adminChoice == 3) {
-                            viewHistory();
-                        }
+                        else if (menuChoice == 3) viewHistory();
                     } 
-                    // --- OGRENCI MENUSU (SADE) ---
+                    // --- PERSONEL MENUSU (YENI EKLENDI!) ---
+                    else if (strcmp(role, "personel") == 0) {
+                        printf("\n[ PERSONEL PANELI ]\n");
+                        printf("1. Envanter Yonetimi (Kitap Islemleri)\n");
+                        printf("2. Islem Gecmisini (Loglari) Goruntule\n");
+                        printf("0. Cikis Yap\nSeciminiz: ");
+                        scanf("%d", &menuChoice);
+
+                        if (menuChoice == 1) {
+                            int bookChoice;
+                            do {
+                                printf("\n--- ENVANTER YONETIMI ---\n");
+                                printf("1. Kitap Ekle\n2. Kitap Sil\n3. Kitaplari Listele\n0. Personel Paneline Don\nSecim: ");
+                                scanf("%d", &bookChoice);
+                                if (bookChoice == 1) addBook(username);
+                                else if (bookChoice == 2) deleteBook(username);
+                                else if (bookChoice == 3) listBooks();
+                            } while (bookChoice != 0);
+                        }
+                        else if (menuChoice == 2) viewHistory();
+                    }
+                    // --- OGRENCI MENUSU ---
                     else if (strcmp(role, "ogrenci") == 0) {
                         printf("\n[ OGRENCI PANELI ]\n");
                         printf("1. Kitaplari Listele\n2. Kitap Odunc Al\n3. Kitap Iade Et\n0. Cikis Yap\nSecim: ");
-                        scanf("%d", &adminChoice); 
+                        scanf("%d", &menuChoice); 
 
-                        if (adminChoice == 1) listBooks();
-                        else if (adminChoice == 2) borrowBook(username);
-                        else if (adminChoice == 3) returnBook(username);
+                        if (menuChoice == 1) listBooks();
+                        else if (menuChoice == 2) borrowBook(username);
+                        else if (menuChoice == 3) returnBook(username);
                     }
-                } while (adminChoice != 0);
+                } while (menuChoice != 0);
                 
                 logTransaction(username, "SISTEMDEN CIKTI", "-");
             } else {
